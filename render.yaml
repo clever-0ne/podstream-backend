@@ -1,0 +1,50 @@
+# Render Blueprint for the PodStream honeypot backend.
+#
+# Usage: push the backend/ folder to a GitHub repo, then either
+#   - create a new Render "Web Service" and point it at that repo, or
+#   - use "Blueprint" in the Render dashboard and paste this file.
+#
+# Render builds the app with `npm install`, then runs `npm start`
+# (which runs `node src/server.js`). The service binds to 0.0.0.0 and
+# reads PORT from the environment, so no host/port config is needed here.
+
+services:
+  - type: web
+    name: podstream-honeypot-backend
+    runtime: node
+    plan: free
+
+    # Node 20 LTS is a safe, current baseline for the dependencies
+    # (better-sqlite3 ^11 supports Node 18-22+).
+    buildCommand: npm install
+    startCommand: npm start
+
+    # This file lives inside backend/, so the repo root for the web service
+    # is the folder that contains render.yaml.
+    rootDir: .
+
+    healthCheckPath: /api/health
+
+    # Listens on the host/port Render injects via process.env.PORT.
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Strong, fixed admin key for the dashboard (/admin).
+      # Set your own secret here. If omitted, a random key is generated
+      # on first boot and stored in data/.admin-key (on the disk below).
+      - key: ADMIN_KEY
+        sync: false
+
+      # On Render, the app's own filesystem is ephemeral across redeploys.
+      # Put the SQLite DB on a persistent disk so captured records survive
+      # restarts/redeploys. The app computes its data dir from DATA_DIR and
+      # creates it if missing (see backend/src/config.js).
+      - key: DATA_DIR
+        value: /var/data
+
+    # Persistent disk mounted at the same path DATA_DIR points to.
+    disk:
+      name: podstream-data
+      mountPath: /var/data
+      sizeGB: 1

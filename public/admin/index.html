@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Honeypot Admin — PodStream Research</title>
+  <style>
+    :root {
+      --bg: #0b0e11; --panel: #161b22; --panel2: #1c2128; --border: #2b323a;
+      --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --red: #f85149;
+      --blue: #58a6ff; --amber: #d29922; --radius: 8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh; padding: 24px;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+
+    /* Banner */
+    .banner {
+      background: rgba(210, 153, 34, 0.12); border: 1px solid rgba(210, 153, 34, 0.4);
+      color: var(--amber); padding: 12px 16px; border-radius: var(--radius);
+      font-size: .9rem; margin-bottom: 20px; line-height: 1.5;
+    }
+    .banner strong { color: #e3b341; }
+
+    /* Header row */
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    h1 { font-size: 1.5rem; font-weight: 700; }
+    .status { font-size: .8rem; color: var(--muted); }
+    .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 6px; }
+    .status .dot.on { background: var(--green); }
+
+    /* Key card */
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 20px; }
+    .card h2 { font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .flex-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .flex-head h2 { margin-bottom: 0; }
+    .head-actions { display: flex; gap: 8px; }
+    .key-row { display: flex; gap: 10px; }
+    .key-row input { flex: 1; background: var(--panel2); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: var(--radius); font-size: .95rem; }
+    button { background: var(--blue); border: none; color: #0b0e11; font-weight: 700; padding: 10px 18px; border-radius: var(--radius); cursor: pointer; font-size: .9rem; }
+    button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+    button.danger { background: rgba(248, 81, 73, 0.15); color: var(--red); border: 1px solid rgba(248, 81, 73, 0.4); }
+    button.small { padding: 6px 10px; font-size: .8rem; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .stat .num { font-size: 1.9rem; font-weight: 800; color: var(--green); }
+    .stat .lbl { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }
+
+    /* Breakdowns */
+    .breakdown { list-style: none; }
+    .breakdown li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: .9rem; }
+    .breakdown li .n { color: var(--green); font-weight: 700; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: .72rem; letter-spacing: .5px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .pwd { color: var(--amber); word-break: break-all; max-width: 260px; }
+    .user { max-width: 220px; word-break: break-all; }
+    .muted { color: var(--muted); }
+    .search-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .search-row input { flex: 1; min-width: 200px; background: var(--panel2); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: var(--radius); font-size: .9rem; }
+
+    .empty { text-align: center; color: var(--muted); padding: 30px 0; font-size: .95rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="banner">
+      <strong>dasboard page
+    </div>
+
+    <div class="top">
+      <h1>Honeypot Admin</h1>
+      <span class="status"><span class="dot" id="statusDot"></span><span id="statusText">Checking backend…</span></span>
+    </div>
+
+    <div class="card">
+      <h2>Admin key</h2>
+      <div class="key-row">
+        <input type="password" id="adminKey" placeholder="X-Admin-Key (shown in the server console on start)">
+        <button class="ghost" id="toggleKey">Show</button>
+        <button id="saveKey">Save &amp; connect</button>
+      </div>
+      <div class="toast" id="keyToast"></div>
+
+      <div class="hidden" id="changeSection">
+        <h2 style="margin-top:20px">Change admin key</h2>
+        <div class="key-row">
+          <input type="password" id="newKey" placeholder="New key (8+ characters)">
+          <button class="ghost" id="genKey" title="Generate a random key">Generate</button>
+          <button id="changeKey">Change key</button>
+        </div>
+        <div class="toast" id="changeToast"></div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="sTotal">–</div><div class="lbl">Submissions</div></div>
+      <div class="stat"><div class="num" id="sUsers">–</div><div class="lbl">Unique usernames</div></div>
+      <div class="stat"><div class="num" id="sIps">–</div><div class="lbl">Unique IPs</div></div>
+    </div>
+
+    <div class="cols">
+      <div class="card">
+        <h2>By country</h2>
+        <ul class="breakdown" id="byCountry"><li class="muted">Loading…</li></ul>
+      </div>
+      <div class="card">
+        <h2>By method</h2>
+        <ul class="breakdown" id="byMethod"><li class="muted">Loading…</li></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex-head">
+        <h2>Submissions</h2>
+        <div class="head-actions">
+          <button class="ghost" id="exportPdfBtn" title="Download all records as a PDF">Save PDF</button>
+          <button class="danger" id="clearAllBtn">Clear all records</button>
+        </div>
+      </div>
+      <div class="search-row">
+        <input type="text" id="search" placeholder="Search username, password, IP, country, city…">
+        <button class="ghost" id="refreshBtn">Refresh</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Username</th><th>Password</th><th>IP</th><th>Country</th><th>City</th><th>Method</th><th>Time (UTC)</th><th></th></tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    // Key lives only in memory for this page load. After a refresh the admin
+    // key must be entered again for records to show.
+    let key = '';
+    $('adminKey').value = key;
+
+    const setStatus = (on, text) => {
+      $('statusDot').classList.toggle('on', on);
+      $('statusText').textContent = text;
+    };
+
+    // True only after a key has actually been submitted. Until then, records
+    // and stats stay hidden — nothing is fetched from the backend.
+    function hasKey() {
+      return key.trim().length > 0;
+    }
+
+    // Restore the "no key yet" state: hide stats, breakdowns, rows, and the
+    // change-key section (which stays locked until the current key is verified).
+    function resetLocked() {
+      setStatus(false, 'Enter the admin key to view records.');
+      $('sTotal').textContent = '–';
+      $('sUsers').textContent = '–';
+      $('sIps').textContent = '–';
+      renderBreakdown($('byCountry'), []);
+      renderBreakdown($('byMethod'), []);
+      $('rows').innerHTML = '<tr><td colspan="9" class="empty">Enter the admin key above to view records.</td></tr>';
+      $('changeSection').classList.add('hidden');
+    }
+
+    async function api(path, options = {}) {
+      if (!hasKey()) {
+        const err = new Error('Admin key required.');
+        err.noAuth = true;
+        throw err;
+      }
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (key) headers['X-Admin-Key'] = key;
+      const res = await fetch(path, { ...options, headers });
+      if (res.status === 401) {
+        const err = new Error('Unauthorized — check your admin key.');
+        err.noAuth = true;
+        throw err;
+      }
+      if (res.status === 204) return null;
+      const body = await res.json();
+      if (!res.ok) throw new Error((body && body.error) || 'Request failed.');
+      return body;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+
+    function renderBreakdown(el, items) {
+      if (!items.length) { el.innerHTML = '<li class="muted">No data yet.</li>'; return; }
+      el.innerHTML = items
+        .map((i) => `<li><span>${escapeHtml(i.country || i.method || i.city) || '—'}</span><span class="n">${i.n}</span></li>`)
+        .join('');
+    }
+
+    function renderRows(rows) {
+      const tb = $('rows');
+      if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="9" class="empty">No submissions yet. Submit a login on one of the clone pages to record one.</td></tr>';
+        return;
+      }
+      tb.innerHTML = rows.map((r) => `
+        <tr>
+          <td class="muted">${r.id}</td>
+          <td class="user">${escapeHtml(r.username) || '—'}</td>
+          <td class="pwd">${escapeHtml(r.password) || '—'}</td>
+          <td class="mono">${escapeHtml(r.ip) || '—'}</td>
+          <td>${escapeHtml(r.country) || '—'}</td>
+          <td>${escapeHtml(r.city) || '—'}</td>
+          <td><span class="muted">${escapeHtml(r.method)}</span></td>
+          <td class="mono muted">${escapeHtml(r.created_at)}</td>
+          <td><button class="danger small" onclick="del(${r.id})">Delete</button></td>
+        </tr>`).join('');
+    }
+
+    async function load() {
+      if (!hasKey()) {
+        resetLocked();
+        return;
+      }
+      try {
+        const [summary, subs] = await Promise.all([
+          api('/api/admin/summary'),
+          api('/api/admin/submissions' + (q ? `?q=${encodeURIComponent(q)}` : '')),
+        ]);
+        setStatus(true, 'Connected to local backend');
+        $('sTotal').textContent = summary.total;
+        $('sUsers').textContent = summary.uniqueUsernames;
+        $('sIps').textContent = summary.uniqueIps;
+        renderBreakdown($('byCountry'), summary.byCountry);
+        renderBreakdown($('byMethod'), summary.byMethod);
+        renderRows(subs.data);
+      } catch (e) {
+        setStatus(false, e.message);
+        if (e.noAuth) {
+          resetLocked();
+        } else {
+          $('rows').innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(e.message)}</td></tr>`;
+        }
+      }
+    }
+
+    let q = '';
+    $('search').addEventListener('input', (e) => {
+      q = e.target.value.trim();
+      load();
+    });
+    $('refreshBtn').addEventListener('click', load);
+
+    $('toggleKey').addEventListener('click', () => {
+      const f = $('adminKey');
+      f.type = f.type === 'password' ? 'text' : 'password';
+      $('toggleKey').textContent = f.type === 'password' ? 'Show' : 'Hide';
+    });
+    $('saveKey').addEventListener('click', async () => {
+      key = $('adminKey').value.trim();
+      if (!key) {
+        $('keyToast').textContent = 'Enter a key to view records.';
+        $('keyToast').className = 'toast err';
+        load();
+        return;
+      }
+      try {
+        // Probe with the submitted key before trusting it.
+        await api('/api/admin/summary');
+        $('keyToast').textContent = 'Key verified — records unlocked.';
+        $('keyToast').className = 'toast ok';
+        // Unlock the change-key section only now that the current key is verified.
+        $('changeSection').classList.remove('hidden');
+      } catch (e) {
+        key = '';
+        $('keyToast').textContent = e.message;
+        $('keyToast').className = 'toast err';
+        $('changeSection').classList.add('hidden');
+      }
+      load();
+    });
+
+    // Generate a random 32-char hex key.
+    $('genKey').addEventListener('click', () => {
+      if (!hasKey()) {
+        $('changeToast').textContent = 'Submit the current admin key first.';
+        $('changeToast').className = 'toast err';
+        return;
+      }
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const input = $('newKey');
+      input.value = hex;
+      input.type = 'text';
+      input.focus();
+      $('changeToast').textContent = 'Random key generated. Click "Change key" to apply it.';
+      $('changeToast').className = 'toast ok';
+    });
+
+    // Change the admin key on the server (auth with the current key).
+    $('changeKey').addEventListener('click', async () => {
+      if (!hasKey()) {
+        $('changeToast').textContent = 'Submit the current admin key first.';
+        $('changeToast').className = 'toast err';
+        return;
+      }
+      const newKeyVal = $('newKey').value.trim();
+      const toast = $('changeToast');
+      if (newKeyVal.length < 8) {
+        toast.textContent = 'New key must be at least 8 characters.';
+        toast.className = 'toast err';
+        return;
+      }
+      try {
+        const body = await api('/api/admin/change-key', {
+          method: 'POST',
+          body: JSON.stringify({ newKey: newKeyVal }),
+        });
+        // Use the new key in memory so the dashboard keeps working this load.
+        key = newKeyVal;
+        $('adminKey').value = newKeyVal;
+        toast.textContent = '✅ ' + body.message;
+        toast.className = 'toast ok';
+        $('newKey').value = '';
+        $('newKey').type = 'password';
+        load();
+      } catch (e) {
+        toast.textContent = e.message;
+        toast.className = 'toast err';
+      }
+    });
+
+    window.del = async (id) => {
+      if (!confirm('Delete submission #' + id + '?')) return;
+      try { await api('/api/admin/submissions/' + id, { method: 'DELETE' }); load(); }
+      catch (e) { $('keyToast').textContent = e.message; $('keyToast').className = 'toast err'; }
+    };
+
+    // Export all records as a PDF.
+    $('exportPdfBtn').addEventListener('click', async () => {
+      if (!hasKey()) {
+        $('keyToast').textContent = 'Submit the admin key first.';
+        $('keyToast').className = 'toast err';
+        return;
+      }
+      try {
+        const res = await fetch('/api/admin/export-pdf', {
+          headers: { 'X-Admin-Key': key },
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error((body && body.error) || 'PDF export failed.');
+        }
+        // Trigger the browser download.
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'honeypot-records.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        $('keyToast').textContent = 'PDF saved.';
+        $('keyToast').className = 'toast ok';
+      } catch (e) {
+        $('keyToast').textContent = e.message;
+        $('keyToast').className = 'toast err';
+      }
+    });
+
+    // Clear ALL records (double confirmation — this is destructive).
+    $('clearAllBtn').addEventListener('click', async () => {
+      if (!confirm('Delete ALL captured records? This cannot be undone.')) return;
+      if (!confirm('Are you sure? All records will be permanently deleted.')) return;
+      try {
+        const body = await api('/api/admin/submissions', { method: 'DELETE' });
+        $('keyToast').textContent = `Cleared ${body.deleted} record(s).`;
+        $('keyToast').className = 'toast ok';
+        load();
+      } catch (e) {
+        $('keyToast').textContent = e.message;
+        $('keyToast').className = 'toast err';
+      }
+    });
+
+    load();
+    setInterval(load, 5000);
+  </script>
+</body>
+</html>
